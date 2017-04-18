@@ -94,7 +94,15 @@ def format_session_info(label_names): #add start_day functionality later
     except errors.HttpError, error:
         print(error)
         pass
-    return
+    return session_addresses, provider_addresses
+
+def get_total_headcount(session_info): #gets headcount based on number of unique phone numbers, and number email_only addresses
+    numbers = set([])
+    emails = set([])
+    for label in session_info.keys():
+        numbers.update(session_info[label].keys())
+        emails.update(session_info[label]['from_emails'])
+    return len(numbers) + len(emails)
     
 def create_mailing_lists(session_info, provider_addresses): #make mailing lists for each label
     #TODO: fine-tune cases
