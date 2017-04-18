@@ -41,7 +41,7 @@ class getEmails (threading.Thread):
                 print('%s: %s subscriptions total received for %s' % (datetime.now(), self.counter, self.label_name))
                 prev_log_time = time.time()
             time.sleep(self.freq - ((time.time() - start_time) % self.freq))
-            self.counter += get_new_messages(self.service, self.q, self.label_id, self.label_name, self.q_lock)
+            self.counter += get_new_message_ids(self.service, self.q, self.label_id, self.q_lock)
         
 class sendResponses (threading.Thread):
     def __init__(self, label_id, label_name, queue, lock, freq):
@@ -119,29 +119,19 @@ def main():
         update_thread.start()
         response_thread.start()
 '''
-def get_new_messages(service, message_queue, label_id, label_name, lock):
+def get_new_message_ids(service, message_queue, label_id, lock):
     user_id = 'me'
-    label_ids = [label_id]
     list_query = 'is:unread'
     try:
-        response = service.users().labels().list(userId=user_id).execute()
-        labels = response['labels']
-        results = service.users().messages().list(userId=user_id, labelIds=label_ids, q=list_query).execute()
-        if 'messages' in results:
-            result_ids = [result['id'] for result in results['messages']]
-            while 'nextPageToken' in results:
-                page_token = response['nextPageToken']
-                results = service.users().messages().list(userId=user_id, q=list_query, pageToken=page_token).execute()
-                #mark as read
-                result_ids += [response['id'] for result in results['messages']]
-            for message_id in result_ids:
-                msg_labels = {'removeLabelIds': ['UNREAD']}
-                service.users().messages().modify(userId=user_id, id=message_id, body=msg_labels).execute()
-                lock.acquire()
-                message_queue.add(message_id)
-                lock.release()
-                #print(str(len(result_ids)) + " messages added to queue for " + label_name + ".")
-            return len(result_ids)
+        result_ids = cm.get_message_ids(service, label_id, list_query)
+        for message_id in result_ids:
+            msg_labels = {'removeLabelIds': ['UNREAD']}
+            service.users().messages().modify(userId=user_id, id=message_id, body=msg_labels).execute()
+            lock.acquire()
+            message_queue.add(message_id)
+            lock.release()
+            #print(str(len(result_ids)) + " messages added to queue for " + label_name + ".")
+        return len(result_ids)
     except errors.HttpError, error: 
         print(error)
         pass
@@ -160,8 +150,10 @@ def send_responses(service, message_queue, label_id, label_name, lock):
             address = from_address['value']
             if label_name == 'INBOX':
                 confirmation_message = createMessage(address, '[DofA] Invalid code', 'The session code that you entered was invalid. Please check and try again.')
+            elif label_name == 'ACT':
+                confirmation_message = createMessage(address, '[DofA] Confirmation', 'Thank you for subscribing to follow-ups about the Day of Action!')
             else:
-                confirmation_message = createMessage(address, '[DofA] Confirmation', 'Thank you for subscribing to session: ' + label_name + '.')
+                confirmation_message = createMessage(address, '[DofA] Confirmation', 'Thank you for subscribing to updates for the topics covered in session: ' + label_name + '.')
             message_result = service.users().messages().send(userId=user_id, body=confirmation_message).execute()
             messages_handled.add(message)
         except errors.HttpError, error:

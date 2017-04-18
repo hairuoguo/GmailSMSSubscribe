@@ -68,3 +68,21 @@ def create_service():
     http = credentials.authorize(httplib2.Http())
     service = discovery.build('gmail', 'v1', http=http)
     return service
+
+def get_message_ids(service, label_id, query=''):
+    user_id = 'me'
+    result_ids = []
+    label_ids = [label_id]
+    try:
+        results = service.users().messages().list(userId=user_id, labelIds=label_ids, q=query).execute()
+        if 'messages' in results:
+            result_ids = [result['id'] for result in results['messages']]
+            while 'nextPageToken' in results:
+                page_token = response['nextPageToken']
+                results = service.users().messages().list(userId=user_id, q=query, pageToken=page_token).execute()
+                #mark as read
+                result_ids += [response['id'] for result in results['messages']]
+    except errors.HttpError, error:
+        print(error)
+        pass
+    return result_ids
