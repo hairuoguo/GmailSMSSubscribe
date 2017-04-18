@@ -2,9 +2,6 @@ import label_threads_mod as lt
 import credentials_mod as cm
 from apiclient import errors
 
-def ask_for_email(session_info, provider_addresses): #ask emails from all numbers that didn't have any
-    for 
-
  
 def send_emails_to_all(email_list, subject, text):
     service = cm.create_service()

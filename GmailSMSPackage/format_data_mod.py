@@ -99,6 +99,7 @@ def format_session_info(label_names): #add start_day functionality later
 def create_mailing_lists(session_info, provider_addresses): #make mailing lists for each label
     #TODO: fine-tune cases
     #TODO: output as CSV
+    #TODO: can count by getting number of discrete phone #s, and number of discrete emails
     mailing_lists = {label: set([]) for label in session_info.keys()}
     mailing_lists["no_emails"] = set([])
     for label in session_info.keys():
